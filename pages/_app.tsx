@@ -2,11 +2,33 @@ import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import Login from "./login";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../src/config/firebase";
+import { auth, db } from "../src/config/firebase";
 import Loading from "../src/components/Loading";
+import { useEffect } from "react";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [loggedInUser, loading, _error] = useAuthState(auth);
+
+  useEffect(() => {
+    const setUserInDb = async () => {
+      try {
+        await setDoc(
+          doc(db, "users", loggedInUser?.email as string),
+          {
+            email: loggedInUser?.email,
+            lastSeen: serverTimestamp(),
+            photoUrl: loggedInUser?.photoURL,
+          },
+          { merge: true } // just update what is changed
+        );
+      } catch (error) {
+        console.log("ERROR SETTING USER INFO IN DB", error);
+      }
+    };
+
+    if (loggedInUser) setUserInDb();
+  }, [loggedInUser]);
 
   if (loading) return <Loading />;
 
